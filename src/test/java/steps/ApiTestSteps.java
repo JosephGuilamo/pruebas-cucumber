@@ -9,6 +9,7 @@ import static org.junit.Assert.*;
 import static io.restassured.RestAssured.*;
 import java.util.List;
 import java.util.Map;
+import io.cucumber.java.Scenario;
 
 
 public class ApiTestSteps {
@@ -48,21 +49,15 @@ public class ApiTestSteps {
         assertTrue(response.jsonPath().getList("$").size() > 0);
     }
 
+ // crud!
     @When("realizo una búsqueda de libros con {string}")
     public void realizo_una_busqueda_de_libros_con(String searchQuery) {
         response = given().when().get(BASE_URL + "/libros?search=" + searchQuery);
-
-
         libros = response.jsonPath().getList("$");
-
-        // Debug para verificar la respuesta
-        System.out.println("Respuesta del servidor: " + response.getBody().asString());
-        System.out.println("Cantidad de libros encontrados: " + libros.size());
     }
 
     @Then("la respuesta no debe contener ningún libro")
     public void la_respuesta_no_debe_contener_ningun_libro() {
-        assertNotNull("La respuesta no debería ser nula", libros);
         assertTrue("Se encontraron libros cuando no debería haber ninguno", libros.isEmpty());
     }
 
@@ -78,6 +73,25 @@ public class ApiTestSteps {
         createdBookId = Integer.parseInt(response.getBody().asString().trim());
     }
 
+    // aqui valido de nuevo si el libro existe
+    @When("realizo una búsqueda parcial de libros con {string}")
+    public void realizo_una_busqueda_parcial_de_libros_con(String searchQuery) {
+        response = given().when().get(BASE_URL + "/libros?search=" + searchQuery);
+        libros = response.jsonPath().getList("$");
+        System.out.println("El resultado luego de la busqueda es:" + " " + libros);
+    }
+
+    @Then("la respuesta debe contener un libro cuyo título contenga {string}")
+    public void la_respuesta_debe_contener_un_libro_cuyo_titulo_contenga(String palabraEsperada) {
+        assertNotNull("La respuesta de la API está vacía", libros);
+        assertFalse(" No se encontraron libros en la respuesta", libros.isEmpty());
+
+        boolean contienePalabra = libros.stream()
+                .anyMatch(libro -> libro.get("titulo").toString().toLowerCase().contains(palabraEsperada.toLowerCase()));
+
+        assertTrue("Ningún libro contiene la palabra: " + palabraEsperada, contienePalabra);
+    }
+
     @When("actualizo el libro con título {string} a {string}")
     public void actualizo_el_libro(String tituloViejo, String tituloNuevo) {
         response = given()
@@ -85,13 +99,33 @@ public class ApiTestSteps {
                 .body("{\"titulo\":\"" + tituloNuevo + "\"}")
                 .when()
                 .patch("https://personal-anlcb4ao.outsystemscloud.com/Relatosdepapel/rest/v1/actualizarLibro?id=" + createdBookId);
+
     }
+
+    @Then("la respuesta debe traer el registro actualizado {string}")
+    public void la_respuesta_debe_traer_el_registro_actualizado(String string) {
+        response = given().when().get(BASE_URL + "/getLibro?id=" + createdBookId);
+        System.out.println("Respuesta completa: " + response.asString());
+    }
+
 
     @When("elimino el libro con título {string}")
     public void elimino_el_libro(String titulo) {
         response = given()
                 .when()
                 .delete("/borrarLibro?id=" + createdBookId);
+    }
+
+    @When("realizo una búsqueda de nuevo de libro con {string}")
+    public void realizo_una_busqueda_de_nuevo_de_libro_con(String searchQuery) {
+        response = given().when().get(BASE_URL + "/libros?search=" + searchQuery);
+        libros = response.jsonPath().getList("$");
+    }
+
+    @Then("la respuesta no debe contener de nuevo ningún libro")
+    public void la_respuesta_no_debe_contener_de_nuevo_ningun_libro() {
+        assertNotNull("La respuesta no debería ser nula", libros);
+        assertTrue("Se encontraron libros cuando no debería haber ninguno", libros.isEmpty());
     }
 
 
